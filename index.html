@@ -119,13 +119,13 @@ ACTUAL)</div>
         <div>
           <div class="side-title">Kontrol mantığı</div>
           <div class="logic">
-            Excel içindeki <strong>F sütunu = B1 veya B2</strong> kayıtlarının tamamından referans aralığı çıkarılır (B2, yetkili personel olarak B1 ile aynı şekilde değerlendirilir). Ardından <strong>B1 veya B2 haricindeki skill</strong> kayıtları taranır ve B1/B2 referans bitişinden sonra biten kayıtlar tespit edilir. Her taşan kayıt için, aynı <strong>Task Card</strong> üzerinde B1 veya B2 saati açan personel <strong>Sorumlu B1/B2 Personeli</strong> olarak etiketlenir.
+            Referans, <strong>tüm dosya için tek bir tarih değil</strong>; her <strong>WO + Task Card</strong> kombinasyonu kendi referansını oluşturur. O iş kartında <strong>Skill = B1 veya B2</strong> olan kayıtların en son bitiş saati, o işin referans sonudur (B2, yetkili personel olarak B1 ile aynı şekilde değerlendirilir). Aynı iş kartında <strong>B1 veya B2 haricindeki</strong> bir skill kaydı bu referans sonundan sonra bitiyorsa taşma (alarm) olarak işaretlenir ve o iş kartında B1/B2 saati açan personel <strong>Sorumlu B1/B2 Personeli</strong> olarak etiketlenir.
           </div>
         </div>
         <div class="formula">
-          B1/B2 Referans Sonu = MAX(B1 veya B2 kayıtlarının bitişi)<br>
-          Alarm = Skill ≠ B1  AND  Skill ≠ B2  AND  Kayıt Bitişi &gt; B1/B2 Referans Sonu<br>
-          Sorumlu B1/B2 Personeli = Aynı Task Card üzerinde Skill = B1 veya B2 olan personel(ler)
+          Referans(WO, Task Card) = MAX(Bitiş | Skill ∈ {B1,B2}, aynı WO+Task Card)<br>
+          Alarm(kayıt) = Skill ∉ {B1,B2}  AND  Kayıt Bitişi &gt; Referans(kaydın WO+Task Card'ı)<br>
+          Sorumlu B1/B2 Personeli = Aynı WO+Task Card üzerinde Skill = B1 veya B2 olan personel(ler)
         </div>
       </aside>
     </section>
@@ -175,7 +175,7 @@ ACTUAL)</div>
           <tbody id="summaryBody"></tbody>
         </table>
       </div>
-      <div class="footer-note">Not: Her sicil bir kez gösterilir. Bir personelde birden fazla taşan kayıt varsa, en ileri bitişli kayıt özet satırına alınır ve toplam taşan kayıt adedi ayrıca gösterilir. "Sorumlu B1/B2 Personeli" sütunu, aynı Task Card üzerinde B1 veya B2 saati açan personeli gösterir; eşleşme bulunamazsa "—" görünür.</div>
+      <div class="footer-note">Not: Her sicil bir kez gösterilir. Bir personelde birden fazla taşan kayıt varsa, en ileri bitişli kayıt özet satırına alınır ve toplam taşan kayıt adedi ayrıca gösterilir. Referans, dosyadaki tüm B1/B2 kayıtlarının tek bir ortak tarihi değil; her WO+Task Card kendi B1/B2 referansını kullanır. "Sorumlu B1/B2 Personeli" sütunu, aynı WO+Task Card üzerinde B1 veya B2 saati açan personeli gösterir; eşleşme bulunamazsa "—" görünür.</div>
     </section>
 
     <section class="card section hidden" id="detailSection">
@@ -351,53 +351,56 @@ ACTUAL)</div>
     return `${m} dk`;
   }
 
+  function isAuthSkill(skill){
+    const s = String(skill ?? '').toUpperCase();
+    return s === 'B1' || s === 'B2';
+  }
+
   function jobKey(r){
-    const task = cleanText(r.task);
-    if (task) return `task:${task.toLocaleLowerCase('tr-TR')}`;
     const wo = cleanText(r.wo);
+    const task = cleanText(r.task);
+    if (wo && task) return `wt:${wo.toLocaleLowerCase('tr-TR')}|${task.toLocaleLowerCase('tr-TR')}`;
+    if (task) return `task:${task.toLocaleLowerCase('tr-TR')}`;
     if (wo) return `wo:${wo.toLocaleLowerCase('tr-TR')}`;
     return null;
   }
 
-  function buildB1Index(b1Records){
-    const map = new Map();
-    for (const r of b1Records){
+  function groupByJob(records){
+    const groups = new Map();
+    for (const r of records){
       const key = jobKey(r);
       if (!key) continue;
-      if (!map.has(key)) map.set(key, new Set());
-      map.get(key).add(r.employee);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(r);
     }
-    return map;
-  }
-
-  function getResponsibleB1(r, index){
-    const key = jobKey(r);
-    if (!key) return [];
-    const set = index.get(key);
-    if (!set) return [];
-    return [...set].sort((a,b)=>a.localeCompare(b,'tr'));
+    return groups;
   }
 
   function analyze(records){
-    const b1 = records.filter(r => {
-      const skill = r.skill.toUpperCase();
-      return skill === 'B1' || skill === 'B2';
-    });
-    if (!b1.length) return {records,b1,referenceStart:null,referenceEnd:null,candidates:[],people:[],schemaInfo:null};
-    const referenceStart = new Date(Math.min(...b1.map(r=>r.start.getTime())));
-    const referenceEnd = new Date(Math.max(...b1.map(r=>r.end.getTime())));
-    const b1Index = buildB1Index(b1);
+    const b1 = records.filter(r => isAuthSkill(r.skill));
+    if (!b1.length) return {records,b1,candidates:[],people:[],jobGroupCount:0,jobRefCount:0,schemaInfo:null};
 
-    const candidates = records
-      .filter(r => {
-        const skill = r.skill.toUpperCase();
-        return skill !== 'B1' && skill !== 'B2' && r.end > referenceEnd;
-      })
-      .sort((a,b)=>b.end-a.end || b.start-a.start);
+    const groups = groupByJob(records);
+    const candidates = [];
+    let jobRefCount = 0;
 
-    for (const r of candidates){
-      r.responsibleB1 = getResponsibleB1(r, b1Index);
+    for (const items of groups.values()){
+      const auth = items.filter(r => isAuthSkill(r.skill));
+      if (!auth.length) continue;
+      jobRefCount++;
+      const refEnd = new Date(Math.max(...auth.map(r=>r.end.getTime())));
+      const refStart = new Date(Math.min(...auth.map(r=>r.start.getTime())));
+      const responsible = [...new Set(auth.map(r=>r.employee))].sort((a,b)=>a.localeCompare(b,'tr'));
+      for (const r of items){
+        if (!isAuthSkill(r.skill) && r.end > refEnd){
+          r.refStart = refStart;
+          r.refEnd = refEnd;
+          r.responsibleB1 = responsible;
+          candidates.push(r);
+        }
+      }
     }
+    candidates.sort((a,b)=>b.end-a.end || b.start-a.start);
 
     const grouped = new Map();
     for (const r of candidates){
@@ -413,11 +416,11 @@ ACTUAL)</div>
         skills:[...new Set(items.map(x=>x.skill))].sort((a,b)=>a.localeCompare(b,'tr')),
         responsibleB1:[...new Set(items.flatMap(x=>x.responsibleB1))].sort((a,b)=>a.localeCompare(b,'tr')),
         latest,
-        delta:minutesBetween(referenceEnd,latest.end)
+        delta:minutesBetween(latest.refEnd,latest.end)
       };
     }).sort((a,b)=>b.latest.end-a.latest.end || a.employee.localeCompare(b.employee,'tr'));
 
-    return {records,b1,referenceStart,referenceEnd,candidates,people,b1Index};
+    return {records,b1,candidates,people,jobGroupCount:groups.size,jobRefCount};
   }
 
   function loadWorkbook(file){
@@ -480,7 +483,7 @@ ACTUAL)</div>
         skills:[...new Set(items.map(x=>x.skill))].sort((a,b)=>a.localeCompare(b,'tr')),
         responsibleB1:[...new Set(items.flatMap(x=>x.responsibleB1||[]))].sort((a,b)=>a.localeCompare(b,'tr')),
         latest,
-        delta:minutesBetween(state.analysis.referenceEnd,latest.end)
+        delta:minutesBetween(latest.refEnd,latest.end)
       };
     }).sort((a,b)=>b.latest.end-a.latest.end || a.employee.localeCompare(b.employee,'tr'));
   }
@@ -504,10 +507,12 @@ ACTUAL)</div>
     $('clearSearchBtn').classList.toggle('hidden', !state.search);
     $('searchInput').value=state.search;
 
-    const refText = a.referenceEnd ? `${fmtDate(a.referenceStart)} ${fmtTime(a.referenceStart)} → ${fmtDateTime(a.referenceEnd)}` : 'B1/B2 kaydı bulunamadı';
+    const refText = a.jobRefCount
+      ? `${a.jobRefCount} / ${a.jobGroupCount} WO+Task Card için B1/B2 referansı hesaplandı`
+      : 'B1/B2 referansı hesaplanamadı (WO/Task Card eşleşmesi yok)';
     $('summarySub').textContent = state.search
-      ? `Arama: “${state.search}” • B1/B2 referans aralığı: ${refText}`
-      : `B1/B2 referans aralığı: ${refText}`;
+      ? `Arama: “${state.search}” • ${refText} • ${a.candidates.length} taşan kayıt`
+      : `${refText} • ${a.candidates.length} taşan kayıt`;
 
     const sb=$('summaryBody'); sb.innerHTML='';
     if(!a.b1.length){
@@ -526,7 +531,7 @@ ACTUAL)</div>
           <td><div class="skills">${p.skills.map(s=>`<span class="skill-chip">${esc(s)}</span>`).join('')}</div></td>
           <td><strong>${fmtDate(r.end)}</strong> <span class="muted">${fmtTime(r.end)}</span></td>
           <td>${fmtTime(r.start)} → ${fmtTime(r.end)}</td>
-          <td>${fmtDateTime(a.referenceEnd)}</td>
+          <td>${fmtDateTime(r.refEnd)}</td>
           <td><span class="delta">+${fmtDelta(p.delta)}</span></td>
           <td>${p.items.length}</td>
           <td><span class="skill-chip">${esc(r.wo || '—')}</span></td>
@@ -541,7 +546,7 @@ ACTUAL)</div>
       const tr=document.createElement('tr'); tr.innerHTML=`
         <td><strong>${esc(r.employee)}</strong></td><td><span class="skill-chip">${esc(r.skill)}</span></td><td><span class="skill-chip">${esc(r.wo||'—')}</span></td><td>${esc(r.task||'—')}</td>
         <td>${(r.responsibleB1&&r.responsibleB1.length) ? `<div class="skills">${r.responsibleB1.map(s=>`<span class="resp-chip">${esc(s)}</span>`).join('')}</div>` : '<span class="muted">—</span>'}</td>
-        <td>${fmtDateTime(r.start)}</td><td><strong>${fmtDateTime(r.end)}</strong></td><td>${fmtDateTime(a.referenceEnd)}</td><td><span class="delta">+${fmtDelta(minutesBetween(a.referenceEnd,r.end))}</span></td>`;
+        <td>${fmtDateTime(r.start)}</td><td><strong>${fmtDateTime(r.end)}</strong></td><td>${fmtDateTime(r.refEnd)}</td><td><span class="delta">+${fmtDelta(minutesBetween(r.refEnd,r.end))}</span></td>`;
       db.appendChild(tr);
     }
     $('exportBtn').disabled = !hasFilteredMatches;
@@ -557,7 +562,7 @@ ACTUAL)</div>
     if(!candidates.length) return;
     const rows=[['Durum','Personel Sicil','Skill','WO','Task Card','Sorumlu B1/B2 Personeli','Başlangıç','Bitiş','B1/B2 Referans Sonu','Taşma Süresi']];
     for(const r of candidates){
-      rows.push(['AŞIM',r.employee,r.skill,r.wo||'',r.task||'',(r.responsibleB1||[]).join(', '),fmtDateTime(r.start),fmtDateTime(r.end),fmtDateTime(a.referenceEnd),fmtDelta(minutesBetween(a.referenceEnd,r.end))]);
+      rows.push(['AŞIM',r.employee,r.skill,r.wo||'',r.task||'',(r.responsibleB1||[]).join(', '),fmtDateTime(r.start),fmtDateTime(r.end),fmtDateTime(r.refEnd),fmtDelta(minutesBetween(r.refEnd,r.end))]);
     }
     const ws=XLSX.utils.aoa_to_sheet(rows);
     ws['!cols']=[{wch:10},{wch:18},{wch:14},{wch:16},{wch:24},{wch:22},{wch:20},{wch:20},{wch:20},{wch:16}];
