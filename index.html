@@ -68,6 +68,8 @@
     button{border:1px solid var(--border);color:var(--text);background:rgba(255,255,255,.045);padding:10px 13px;border-radius:12px;font-weight:700;cursor:pointer;transition:.15s ease}
     button:hover:not(:disabled){transform:translateY(-1px);border-color:rgba(133,203,246,.35);background:rgba(255,255,255,.075)}
     button.primary{background:linear-gradient(135deg,rgba(96,214,255,.18),rgba(167,139,250,.15));border-color:rgba(96,214,255,.27)}
+    .whatsapp-btn{background:rgba(37,211,102,.12);border-color:rgba(37,211,102,.35);color:#b8f5d0;flex-shrink:0;width:42px;height:42px;padding:0;display:inline-flex;align-items:center;justify-content:center;font-size:18px;border-radius:12px}
+    .whatsapp-btn:hover:not(:disabled){background:rgba(37,211,102,.18);border-color:rgba(37,211,102,.5)}
     button:disabled{opacity:.42;cursor:not-allowed}
     .hidden{display:none!important}
         .section{padding:18px;margin-bottom:16px}.section-head{display:flex;justify-content:space-between;gap:15px;align-items:flex-end;margin-bottom:16px}.section-title{font-size:18px;font-weight:800;letter-spacing:-.02em}.section-sub{color:var(--muted);font-size:12px;margin-top:5px}
@@ -162,6 +164,7 @@ ACTUAL)</div>
           <div class="section-title">Ekibimizin aşım listesi</div>
           <div class="section-sub" id="directorySub">-</div>
         </div>
+        <button id="copyWhatsAppBtn" class="whatsapp-btn" type="button" title="WhatsApp İçin Kopyala" aria-label="WhatsApp İçin Kopyala">📋</button>
       </div>
       <div class="table-wrap">
         <table>
@@ -170,6 +173,7 @@ ACTUAL)</div>
               <th>WO</th>
               <th>Task Card</th>
               <th>Durum</th>
+              <th>Skill</th>
               <th>Sicil</th>
               <th>Personel (İsim Soyisim)</th>
               <th>Kayıt aralığı</th>
@@ -556,6 +560,7 @@ ACTUAL)</div>
         name: EMPLOYEE_DIRECTORY[r.employee],
         wo: r.wo,
         task: r.task,
+        skill: r.skill,
         nrcStatus: r.nrcStatus||'',
         start: r.start,
         end: r.end,
@@ -638,6 +643,7 @@ ACTUAL)</div>
           <td><span class="skill-chip">${esc(m.wo || '—')}</span></td>
           <td>${esc(m.task || '—')}</td>
           <td>${statusChip(m.nrcStatus)}</td>
+          <td><span class="skill-chip">${esc(m.skill)}</span></td>
           ${identityCells}
           <td>${fmtDate(m.start)} ${fmtTime(m.start)} → ${fmtTime(m.end)}</td>
           <td>${m.responsibleB1.length ? `<div class="skills">${m.responsibleB1.map(s=>`<span class="resp-chip">${esc(s)}</span>`).join('')}</div>` : '<span class="muted">—</span>'}</td>
@@ -650,6 +656,91 @@ ACTUAL)</div>
 
   function esc(v){
     return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  }
+
+  const WA_DIVIDER = '━━━━━━━━━━━━━━';
+
+  function fmtDeltaWA(min){
+    const h=Math.floor(min/60), m=min%60;
+    if(h&&m) return `${h} sa ${m} dk`;
+    if(h) return `${h} sa`;
+    return `${m} dk`;
+  }
+
+  function statusEmojiLabel(status){
+    const s = String(status||'').toUpperCase();
+    if (s.includes('CLOSED')) return {emoji:'✅', label:'CLOSED'};
+    if (s.includes('OPEN')) return {emoji:'🔴', label:'OPEN'};
+    if (s.includes('DEFER')) return {emoji:'🟣', label:'DEFER'};
+    if (s.includes('CANCEL')) return {emoji:'⚪', label:'CANCEL'};
+    return {emoji:'❔', label:'—'};
+  }
+
+  function buildWhatsAppText(groups){
+    const totalRecords = groups.reduce((sum,g)=>sum+g.items.length,0);
+    const statusCounts = { OPEN:0, CLOSED:0, DEFER:0, CANCEL:0 };
+    for (const g of groups){
+      for (const m of g.items){
+        const s = String(m.nrcStatus||'').toUpperCase();
+        if (s.includes('CLOSED')) statusCounts.CLOSED++;
+        else if (s.includes('OPEN')) statusCounts.OPEN++;
+        else if (s.includes('DEFER')) statusCounts.DEFER++;
+        else if (s.includes('CANCEL')) statusCounts.CANCEL++;
+      }
+    }
+    const statusLine = ['OPEN','CLOSED','DEFER','CANCEL']
+      .filter(k => statusCounts[k] > 0)
+      .map(k => `${statusEmojiLabel(k).emoji} ${k}: ${statusCounts[k]}`)
+      .join(' | ');
+
+    const lines = [];
+    lines.push('📋 EKİBİMİZİN AŞIM LİSTESİ');
+    lines.push(`👥 Personel: ${groups.length}`);
+    lines.push(`📌 Toplam kayıt: ${totalRecords}`);
+    if (statusLine) lines.push(statusLine);
+    groups.forEach((g, gi) => {
+      lines.push(WA_DIVIDER);
+      lines.push(`👤 ${g.name} — Sicil: ${g.sicil}`);
+      lines.push('');
+      g.items.forEach((m, idx) => {
+        const {emoji, label} = statusEmojiLabel(m.nrcStatus);
+        const resp = m.responsibleB1.length ? m.responsibleB1.join(', ') : '—';
+        lines.push(`${idx+1}. WO: ${m.wo||'—'}. ${m.task||'—'} | ${m.skill} ${emoji} ${label}`);
+        lines.push('');
+        lines.push(`• Kayıt: ${fmtDate(m.start)} ${fmtTime(m.start)} – ${fmtTime(m.end)}`);
+        lines.push(`• Son B1/B2: ${fmtDateTime(m.refEnd)}`);
+        lines.push(`• Taşma: +${fmtDeltaWA(m.delta)}`);
+        lines.push(`• Sorumlu B1/B2: ${resp}`);
+        if (idx < g.items.length - 1) lines.push('');
+      });
+    });
+    return lines.join('\n');
+  }
+
+  async function copyToClipboard(text){
+    if (navigator.clipboard?.writeText){
+      try { await navigator.clipboard.writeText(text); return true; } catch(e){ /* fall through */ }
+    }
+    try {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return ok;
+    } catch(e){ return false; }
+  }
+
+  async function copyDirectoryForWhatsApp(){
+    const a = state.analysis; if (!a) return;
+    const groups = groupDirectoryRowsByPerson(buildDirectoryRows(a));
+    if (!groups.length){ toast('Kopyalanacak veri yok.'); return; }
+    const text = buildWhatsAppText(groups);
+    const ok = await copyToClipboard(text);
+    toast(ok ? 'Liste panoya kopyalandı. WhatsApp\'a yapıştırabilirsiniz.' : 'Kopyalama başarısız oldu.');
   }
 
   function exportReport(){
@@ -676,6 +767,7 @@ ACTUAL)</div>
   ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('dragover');}));
   dz.addEventListener('drop',e=>{const f=e.dataTransfer.files?.[0]; if(f) loadWorkbook(f);});
   $('exportBtn').addEventListener('click',exportReport);
+  $('copyWhatsAppBtn').addEventListener('click',copyDirectoryForWhatsApp);
   $('searchInput').addEventListener('input',e=>{ state.search=e.target.value; render(); });
   $('clearSearchBtn').addEventListener('click',()=>{ state.search=''; render(); $('searchInput').focus(); });
   $('resetBtn').addEventListener('click',()=>location.reload());
