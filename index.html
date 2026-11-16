@@ -71,10 +71,10 @@
     button:disabled{opacity:.42;cursor:not-allowed}
     .hidden{display:none!important}
         .section{padding:18px;margin-bottom:16px}.section-head{display:flex;justify-content:space-between;gap:15px;align-items:flex-end;margin-bottom:16px}.section-title{font-size:18px;font-weight:800;letter-spacing:-.02em}.section-sub{color:var(--muted);font-size:12px;margin-top:5px}
-    .table-wrap{overflow:auto;border:1px solid rgba(151,190,224,.10);border-radius:17px}
+    .table-wrap{overflow:auto;max-height:68vh;border:1px solid rgba(151,190,224,.10);border-radius:17px}
     table{border-collapse:collapse;width:100%;min-width:880px}
     th,td{padding:11px 12px;border-bottom:1px solid rgba(151,190,224,.09);text-align:left;vertical-align:middle}
-    th{font-size:11px;text-transform:uppercase;letter-spacing:.11em;color:#8fa9c2;background:rgba(4,14,25,.58);position:sticky;top:0;z-index:2}
+    th{font-size:11px;text-transform:uppercase;letter-spacing:.11em;color:#8fa9c2;background:#0a1322;position:sticky;top:0;z-index:2;box-shadow:0 1px 0 rgba(151,190,224,.14)}
     td{font-size:13px;color:#e4f1fc}.row-alert{background:linear-gradient(90deg,rgba(255,107,136,.055),rgba(255,107,136,.015),transparent)}
     tbody tr:hover{background:rgba(96,214,255,.035)}
     .badge{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border-radius:999px;font-size:11px;font-weight:800;border:1px solid rgba(255,107,136,.23);background:rgba(255,107,136,.09);color:#ffc3d0}
@@ -179,6 +179,27 @@ ACTUAL)</div>
       <div class="footer-note">Not: Her sicil bir kez gösterilir. Bir personelde birden fazla taşan kayıt varsa, en ileri bitişli kayıt özet satırına alınır ve toplam taşan kayıt adedi ayrıca gösterilir. Referans, dosyadaki tüm B1/B2 kayıtlarının tek bir ortak tarihi değil; her WO+Task Card kendi B1/B2 referansını kullanır. "Sorumlu B1/B2 Personeli" sütunu, aynı WO+Task Card üzerinde B1 veya B2 saati açan personeli gösterir; eşleşme bulunamazsa "—" görünür.</div>
     </section>
 
+    <section class="card section hidden" id="directorySection">
+      <div class="section-head">
+        <div>
+          <div class="section-title">Takip Listesi Eşleşmeleri</div>
+          <div class="section-sub" id="directorySub">-</div>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Sicil</th>
+              <th>Personel (İsim Soyisim)</th>
+              <th>Eşleşme</th>
+            </tr>
+          </thead>
+          <tbody id="directoryBody"></tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="card section hidden" id="detailSection">
       <div class="section-head">
         <div>
@@ -212,6 +233,39 @@ ACTUAL)</div>
   const $ = (id) => document.getElementById(id);
   const state = { workbook:null, rows:[], analysis:null, fileName:'', search:'' };
   const TZ_SAFE = true;
+
+  const EMPLOYEE_DIRECTORY = {
+    '43429':'ERSUN ALBOĞA',
+    '50699':'SERKAN KARACAK',
+    '52768':'GÜROL ŞAHİN',
+    '76315':'ONUR VAR',
+    '76433':'MUSTAFA KOÇ',
+    '76437':'FATİH KORKMAZ',
+    '77990':'ESRA GÜNEŞ',
+    '82124':'MUHAMMET DÜZ',
+    '82147':'BURAK TUNALI',
+    '82193':'GÖKHAN ÖZKORUCU',
+    '86095':'ABDUL SAMET KUŞAKÇI',
+    '86100':'ALİ İHSAN ÖZBERK',
+    '86326':'DAVUT ESEN',
+    '88282':'METİN MERT ÖZTÜRK',
+    '88311':'OKAN ERDİ',
+    '89179':'YİĞİTCAN BERBER',
+    '92664':'EMİN DİNÇER',
+    '92670':'İLHAN TEPER',
+    '94882':'BERKE EREN AKGÜN',
+    '95073':'TUĞBA YAVUZ',
+    '107126':'ABDULLAH DEMİREL',
+    '107795':'İSA OĞUZ KORKMAZ',
+    '107802':'MURAT UYGUN',
+    '114630':'SERDAR TÜRKOĞLU',
+    '117622':'GİZEM OZAN',
+    '117907':'FURKAN TÜFEKCİ',
+    '119336':'GÖKAY GÖRMÜŞ',
+    '119350':'YILMAZ EFE KARGIN',
+    '119454':'SALİHA BALSU KARABULUT',
+    '119461':'ZEYNEP ATILGAN'
+  };
 
   function toast(message){
     const el = $('toast'); el.textContent = message; el.classList.add('show');
@@ -489,6 +543,25 @@ ACTUAL)</div>
     }).sort((a,b)=>b.latest.end-a.latest.end || a.employee.localeCompare(b.employee,'tr'));
   }
 
+  function buildDirectoryMatches(a){
+    const roles = new Map();
+    for (const r of a.candidates){
+      if (EMPLOYEE_DIRECTORY[r.employee]){
+        if (!roles.has(r.employee)) roles.set(r.employee, new Set());
+        roles.get(r.employee).add('tasan');
+      }
+      for (const resp of (r.responsibleB1||[])){
+        if (EMPLOYEE_DIRECTORY[resp]){
+          if (!roles.has(resp)) roles.set(resp, new Set());
+          roles.get(resp).add('sorumlu');
+        }
+      }
+    }
+    return [...roles.entries()].map(([sicil, roleSet])=>({
+      sicil, name: EMPLOYEE_DIRECTORY[sicil], roles:[...roleSet]
+    })).sort((a,b)=>a.name.localeCompare(b.name,'tr'));
+  }
+
   function render(){
     const a=state.analysis; if(!a) return;
     $('toolbar').classList.remove('hidden');
@@ -551,6 +624,22 @@ ACTUAL)</div>
       db.appendChild(tr);
     }
     $('exportBtn').disabled = !hasFilteredMatches;
+
+    const directoryMatches = buildDirectoryMatches(a);
+    $('directorySection').classList.toggle('hidden', directoryMatches.length === 0);
+    $('directorySub').textContent = directoryMatches.length
+      ? `Takip listesindeki ${directoryMatches.length} personel sonuçlarda tespit edildi.`
+      : '-';
+    const dirBody=$('directoryBody'); dirBody.innerHTML='';
+    for (const m of directoryMatches){
+      const tr=document.createElement('tr');
+      const roleChips = m.roles.map(role => role==='tasan'
+        ? '<span class="badge">TAŞAN PERSONEL</span>'
+        : '<span class="resp-chip">SORUMLU B1/B2</span>'
+      ).join(' ');
+      tr.innerHTML = `<td><strong>${esc(m.sicil)}</strong></td><td>${esc(m.name)}</td><td>${roleChips}</td>`;
+      dirBody.appendChild(tr);
+    }
   }
 
   function esc(v){
