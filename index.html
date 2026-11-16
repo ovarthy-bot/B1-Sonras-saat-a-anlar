@@ -77,10 +77,17 @@
     th{font-size:11px;text-transform:uppercase;letter-spacing:.11em;color:#8fa9c2;background:#0a1322;position:sticky;top:0;z-index:2;box-shadow:0 1px 0 rgba(151,190,224,.14)}
     td{font-size:13px;color:#e4f1fc}.row-alert{background:linear-gradient(90deg,rgba(255,107,136,.055),rgba(255,107,136,.015),transparent)}
     tbody tr:hover{background:rgba(96,214,255,.035)}
+    #directoryBody tr.group-start:not(:first-child) td{border-top:1px solid rgba(151,190,224,.22)}
     .badge{display:inline-flex;align-items:center;gap:7px;padding:6px 9px;border-radius:999px;font-size:11px;font-weight:800;border:1px solid rgba(255,107,136,.23);background:rgba(255,107,136,.09);color:#ffc3d0}
     .badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;box-shadow:0 0 9px currentColor}
     .skills{display:flex;flex-wrap:wrap;gap:6px}.skill-chip{padding:5px 8px;border-radius:8px;background:rgba(96,214,255,.08);border:1px solid rgba(96,214,255,.16);color:#bfeeff;font-size:11px}
     .resp-chip{padding:5px 8px;border-radius:8px;background:rgba(167,139,250,.10);border:1px solid rgba(167,139,250,.24);color:#e4d9ff;font-size:11px}
+    .status-chip{display:inline-flex;align-items:center;padding:5px 9px;border-radius:8px;font-size:11px;font-weight:800;letter-spacing:.03em;border:1px solid transparent}
+    .status-chip.status-closed{background:rgba(98,230,180,.12);border-color:rgba(98,230,180,.3);color:#8df3cf}
+    .status-chip.status-open{background:rgba(255,191,105,.12);border-color:rgba(255,191,105,.32);color:#ffd59e}
+    .status-chip.status-defer{background:rgba(167,139,250,.12);border-color:rgba(167,139,250,.32);color:#dbc9ff}
+    .status-chip.status-cancel{background:rgba(141,160,183,.12);border-color:rgba(141,160,183,.3);color:#b7c6d6}
+    .status-chip.status-unknown{background:rgba(255,107,136,.08);border-color:rgba(255,107,136,.2);color:#ffc3d0}
     .delta{font-weight:800;color:#ffb8c8}.muted{color:var(--muted)}
     .empty{padding:46px 24px;text-align:center;color:var(--muted)}.empty strong{display:block;color:#d9e9f7;font-size:17px;margin-bottom:6px}
     .footer-note{font-size:11px;color:#7590a9;margin-top:14px;line-height:1.6}
@@ -149,40 +156,10 @@ ACTUAL)</div>
       </div>
     </section>
 
-    <section class="card section hidden" id="summarySection">
-      <div class="section-head">
-        <div>
-          <div class="section-title">Tespit edilen personeller</div>
-          <div class="section-sub" id="summarySub">-</div>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Durum</th>
-              <th>Personel Sicil</th>
-              <th>Skill</th>
-              <th>Son taşan kayıt</th>
-              <th>Kayıt aralığı</th>
-              <th>B1/B2 Referans Sonu</th>
-              <th>Taşma</th>
-              <th>Kayıt Sayısı</th>
-              <th>WO</th>
-              <th>Task Card</th>
-              <th>Sorumlu B1/B2 Personeli</th>
-            </tr>
-          </thead>
-          <tbody id="summaryBody"></tbody>
-        </table>
-      </div>
-      <div class="footer-note">Not: Her sicil bir kez gösterilir. Bir personelde birden fazla taşan kayıt varsa, en ileri bitişli kayıt özet satırına alınır ve toplam taşan kayıt adedi ayrıca gösterilir. Referans, dosyadaki tüm B1/B2 kayıtlarının tek bir ortak tarihi değil; her WO+Task Card kendi B1/B2 referansını kullanır. "Sorumlu B1/B2 Personeli" sütunu, aynı WO+Task Card üzerinde B1 veya B2 saati açan personeli gösterir; eşleşme bulunamazsa "—" görünür.</div>
-    </section>
-
     <section class="card section hidden" id="directorySection">
       <div class="section-head">
         <div>
-          <div class="section-title">Takip Listesi Eşleşmeleri</div>
+          <div class="section-title">Ekibimizin aşım listesi</div>
           <div class="section-sub" id="directorySub">-</div>
         </div>
       </div>
@@ -190,9 +167,15 @@ ACTUAL)</div>
         <table>
           <thead>
             <tr>
+              <th>WO</th>
+              <th>Task Card</th>
+              <th>Durum</th>
               <th>Sicil</th>
               <th>Personel (İsim Soyisim)</th>
-              <th>Eşleşme</th>
+              <th>Kayıt aralığı</th>
+              <th>Sorumlu B1/B2 Personeli</th>
+              <th>Son B1/B2 saati</th>
+              <th>Taşma</th>
             </tr>
           </thead>
           <tbody id="directoryBody"></tbody>
@@ -204,23 +187,20 @@ ACTUAL)</div>
       <div class="section-head">
         <div>
           <div class="section-title">Detaylı taşma kayıtları</div>
-          <div class="section-sub">B1/B2 referans sonrasına taşan, B1 veya B2 dışındaki tüm kayıtların kronolojik görünümü.</div>
+          <div class="section-sub" id="detailSub">-</div>
         </div>
       </div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Personel Sicil</th><th>Skill</th><th>WO</th><th>Task Card</th><th>Sorumlu B1/B2 Personeli</th><th>Başlangıç</th><th>Bitiş</th><th>B1/B2 Referans Sonu</th><th>Taşma</th>
+              <th>Personel Sicil</th><th>Skill</th><th>WO</th><th>Task Card</th><th>Durum</th><th>Sorumlu B1/B2 Personeli</th><th>Başlangıç</th><th>Bitiş</th><th>Son B1/B2 saati</th><th>Taşma</th>
             </tr>
           </thead>
           <tbody id="detailBody"></tbody>
         </table>
       </div>
-    </section>
-
-    <section class="card section hidden" id="emptySection">
-      <div class="empty"><strong>Taşan kayıt bulunmadı.</strong>B1/B2 referans bitişinden sonraya uzanan B1 veya B2 dışı bir skill kaydı tespit edilmedi.</div>
+      <div class="footer-note">Referans, dosyadaki tüm B1/B2 kayıtlarının tek bir ortak tarihi değil; her WO+Task Card kendi B1/B2 referansını kullanır. "Sorumlu B1/B2 Personeli" sütunu, aynı WO+Task Card üzerinde B1 veya B2 saati açan personeli gösterir; eşleşme bulunamazsa "—" görünür. "Durum" sütunu, WO+Task Card eşleştirmesiyle <a href="https://ovarthy-bot.github.io/nrc_takip_dashboard/" target="_blank" rel="noopener" style="color:#9bd4ff">NRC Takip Dashboard</a>'dan canlı olarak çekilir.</div>
     </section>
   </main>
 
@@ -231,7 +211,7 @@ ACTUAL)</div>
   'use strict';
 
   const $ = (id) => document.getElementById(id);
-  const state = { workbook:null, rows:[], analysis:null, fileName:'', search:'' };
+  const state = { workbook:null, rows:[], analysis:null, fileName:'', search:'', nrcStatusMap:null };
   const TZ_SAFE = true;
 
   const EMPLOYEE_DIRECTORY = {
@@ -266,6 +246,60 @@ ACTUAL)</div>
     '119454':'SALİHA BALSU KARABULUT',
     '119461':'ZEYNEP ATILGAN'
   };
+
+  const NRC_STATUS_URL = 'https://firestore.googleapis.com/v1/projects/nrc-takip-3bd3c/databases/(default)/documents/dashboard_data/main_data';
+
+  function nrcStatusKey(wo, task){
+    return `${cleanText(wo)}|${cleanText(task).toLocaleLowerCase('tr-TR')}`;
+  }
+
+  async function loadNrcStatusMap(){
+    try{
+      const resp = await fetch(NRC_STATUS_URL);
+      if (!resp.ok) throw new Error('HTTP '+resp.status);
+      const json = await resp.json();
+      const headerValues = (json.fields?.headers?.arrayValue?.values || []).map(v => v.stringValue ?? '');
+      const dataJsonStr = json.fields?.dataJson?.stringValue;
+      const map = new Map();
+      if (!dataJsonStr) return map;
+      const rows = JSON.parse(dataJsonStr);
+      const woIdx = headerValues.indexOf('wo');
+      const tcIdx = headerValues.indexOf('task_card');
+      const statusIdx = headerValues.findIndex(h => String(h).toUpperCase().includes('STATUS') || String(h).toUpperCase() === 'DURUM');
+      if (woIdx === -1 || tcIdx === -1 || statusIdx === -1) return map;
+      for (const row of rows){
+        const wo = cleanText(row[woIdx]);
+        const task = cleanText(row[tcIdx]);
+        if (!wo && !task) continue;
+        map.set(nrcStatusKey(wo, task), cleanText(row[statusIdx]).toUpperCase());
+      }
+      return map;
+    } catch(err){
+      console.error('NRC Takip Dashboard durum verisi alınamadı:', err);
+      return null;
+    }
+  }
+
+  function getNrcStatus(wo, task){
+    if (!state.nrcStatusMap) return '';
+    return state.nrcStatusMap.get(nrcStatusKey(wo, task)) || '';
+  }
+
+  function attachNrcStatus(a){
+    if (!a || !state.nrcStatusMap) return;
+    for (const r of a.candidates){ r.nrcStatus = getNrcStatus(r.wo, r.task); }
+  }
+
+  function statusChip(status){
+    if (state.nrcStatusMap === null) return '<span class="muted">Yükleniyor…</span>';
+    if (!status) return '<span class="muted">—</span>';
+    const cls = status.includes('CLOSED') ? 'status-closed'
+      : status.includes('OPEN') ? 'status-open'
+      : status.includes('DEFER') ? 'status-defer'
+      : status.includes('CANCEL') ? 'status-cancel'
+      : 'status-unknown';
+    return `<span class="status-chip ${cls}">${esc(status)}</span>`;
+  }
 
   function toast(message){
     const el = $('toast'); el.textContent = message; el.classList.add('show');
@@ -433,7 +467,7 @@ ACTUAL)</div>
 
   function analyze(records){
     const b1 = records.filter(r => isAuthSkill(r.skill));
-    if (!b1.length) return {records,b1,candidates:[],people:[],jobGroupCount:0,jobRefCount:0,schemaInfo:null};
+    if (!b1.length) return {records,b1,candidates:[],jobGroupCount:0,jobRefCount:0,schemaInfo:null};
 
     const groups = groupByJob(records);
     const candidates = [];
@@ -457,25 +491,7 @@ ACTUAL)</div>
     }
     candidates.sort((a,b)=>b.end-a.end || b.start-a.start);
 
-    const grouped = new Map();
-    for (const r of candidates){
-      if (!grouped.has(r.employee)) grouped.set(r.employee,[]);
-      grouped.get(r.employee).push(r);
-    }
-
-    const people = [...grouped.entries()].map(([employee, items])=>{
-      const latest = [...items].sort((a,b)=>b.end-a.end || b.start-a.start)[0];
-      return {
-        employee,
-        items,
-        skills:[...new Set(items.map(x=>x.skill))].sort((a,b)=>a.localeCompare(b,'tr')),
-        responsibleB1:[...new Set(items.flatMap(x=>x.responsibleB1))].sort((a,b)=>a.localeCompare(b,'tr')),
-        latest,
-        delta:minutesBetween(latest.refEnd,latest.end)
-      };
-    }).sort((a,b)=>b.latest.end-a.latest.end || a.employee.localeCompare(b.employee,'tr'));
-
-    return {records,b1,candidates,people,jobGroupCount:groups.size,jobRefCount};
+    return {records,b1,candidates,jobGroupCount:groups.size,jobRefCount};
   }
 
   function loadWorkbook(file){
@@ -497,6 +513,7 @@ ACTUAL)</div>
         analysis.schema = schema;
         analysis.sheetName = sheetName;
         analysis.sourceRows = matrix.length - schema.headerIndex - 1;
+        attachNrcStatus(analysis);
         state.workbook=wb; state.rows=matrix; state.analysis=analysis; state.fileName=file.name;
         render();
         toast(`${file.name} analiz edildi.`);
@@ -511,7 +528,7 @@ ACTUAL)</div>
   function recordSearchText(r){
     const raw = Array.isArray(r.raw) ? r.raw.map(v => cleanText(v)).join(' ') : '';
     return [
-      r.employee, r.skill, r.wo, r.task,
+      r.employee, r.skill, r.wo, r.task, r.nrcStatus||'',
       fmtDate(r.start), fmtTime(r.start), fmtDateTime(r.start),
       fmtDate(r.end), fmtTime(r.end), fmtDateTime(r.end),
       (r.responsibleB1||[]).join(' '),
@@ -525,120 +542,109 @@ ACTUAL)</div>
     return a.candidates.filter(r => recordSearchText(r).includes(q));
   }
 
-  function buildFilteredPeople(candidates){
-    const grouped = new Map();
-    for(const r of candidates){
-      if(!grouped.has(r.employee)) grouped.set(r.employee,[]);
-      grouped.get(r.employee).push(r);
+  function buildDirectoryRows(a){
+    // Only the employee who actually produced the overflow record belongs here.
+    // A person listed in r.responsibleB1 holds B1/B2 on this same job and is
+    // shown via the "Sorumlu B1/B2 Personeli" column instead — they did not
+    // personally make the overflow, so they must never appear as the row's
+    // own Sicil/Personel with that record's Kayıt aralığı/Taşma attributed to them.
+    const rows = [];
+    for (const r of a.candidates){
+      if (!EMPLOYEE_DIRECTORY[r.employee]) continue;
+      rows.push({
+        sicil: r.employee,
+        name: EMPLOYEE_DIRECTORY[r.employee],
+        wo: r.wo,
+        task: r.task,
+        nrcStatus: r.nrcStatus||'',
+        start: r.start,
+        end: r.end,
+        responsibleB1: r.responsibleB1||[],
+        refEnd: r.refEnd,
+        delta: minutesBetween(r.refEnd, r.end)
+      });
     }
-    return [...grouped.entries()].map(([employee,items])=>{
-      const latest = [...items].sort((a,b)=>b.end-a.end || b.start-a.start)[0];
-      return {
-        employee, items,
-        skills:[...new Set(items.map(x=>x.skill))].sort((a,b)=>a.localeCompare(b,'tr')),
-        responsibleB1:[...new Set(items.flatMap(x=>x.responsibleB1||[]))].sort((a,b)=>a.localeCompare(b,'tr')),
-        latest,
-        delta:minutesBetween(latest.refEnd,latest.end)
-      };
-    }).sort((a,b)=>b.latest.end-a.latest.end || a.employee.localeCompare(b.employee,'tr'));
+    return rows.sort((a,b)=>b.end-a.end || a.name.localeCompare(b.name,'tr'));
   }
 
-  function buildDirectoryMatches(a){
-    const roles = new Map();
-    for (const r of a.candidates){
-      if (EMPLOYEE_DIRECTORY[r.employee]){
-        if (!roles.has(r.employee)) roles.set(r.employee, new Set());
-        roles.get(r.employee).add('tasan');
-      }
-      for (const resp of (r.responsibleB1||[])){
-        if (EMPLOYEE_DIRECTORY[resp]){
-          if (!roles.has(resp)) roles.set(resp, new Set());
-          roles.get(resp).add('sorumlu');
-        }
-      }
+  function groupDirectoryRowsByPerson(rows){
+    const groups = new Map();
+    for (const r of rows){
+      if (!groups.has(r.sicil)) groups.set(r.sicil, []);
+      groups.get(r.sicil).push(r);
     }
-    return [...roles.entries()].map(([sicil, roleSet])=>({
-      sicil, name: EMPLOYEE_DIRECTORY[sicil], roles:[...roleSet]
-    })).sort((a,b)=>a.name.localeCompare(b.name,'tr'));
+    return [...groups.values()]
+      .map(items => ({ sicil: items[0].sicil, name: items[0].name, items: items.sort((a,b)=>b.end-a.end) }))
+      .sort((a,b)=> b.items[0].end - a.items[0].end || a.name.localeCompare(b.name,'tr'));
   }
 
   function render(){
     const a=state.analysis; if(!a) return;
     $('toolbar').classList.remove('hidden');
-    $('summarySection').classList.remove('hidden');
+    $('detailSection').classList.remove('hidden');
     $('fileName').textContent=state.fileName;
     $('fileMeta').textContent=`Sayfa: ${a.sheetName}`;
     $('statusPill').textContent=a.b1.length ? 'ANALİZ TAMAMLANDI' : 'B1/B2 KAYDI BULUNAMADI';
     $('statusPill').style.borderColor = a.b1.length ? 'rgba(98,230,180,.25)' : 'rgba(255,107,136,.28)';
 
     const filteredCandidates = getFilteredCandidates(a);
-    const filteredPeople = buildFilteredPeople(filteredCandidates);
     const hasAnyCandidates = a.candidates.length > 0;
     const hasFilteredMatches = filteredCandidates.length > 0;
 
-    $('detailSection').classList.toggle('hidden', !hasFilteredMatches);
-    $('emptySection').classList.toggle('hidden', hasAnyCandidates && !hasFilteredMatches ? false : !(!hasAnyCandidates));
     $('clearSearchBtn').classList.toggle('hidden', !state.search);
     $('searchInput').value=state.search;
 
     const refText = a.jobRefCount
       ? `${a.jobRefCount} / ${a.jobGroupCount} WO+Task Card için B1/B2 referansı hesaplandı`
       : 'B1/B2 referansı hesaplanamadı (WO/Task Card eşleşmesi yok)';
-    $('summarySub').textContent = state.search
+    $('detailSub').textContent = state.search
       ? `Arama: “${state.search}” • ${refText} • ${a.candidates.length} taşan kayıt`
       : `${refText} • ${a.candidates.length} taşan kayıt`;
 
-    const sb=$('summaryBody'); sb.innerHTML='';
-    if(!a.b1.length){
-      sb.innerHTML='<tr><td colspan="11"><div class="empty"><strong>B1 veya B2 skill kaydı bulunamadı.</strong>Referans oluşturulamadığı için karşılaştırma yapılamadı.</div></td></tr>';
-    } else if(!hasAnyCandidates){
-      sb.innerHTML='<tr><td colspan="11"><div class="empty"><strong>Taşan personel bulunmadı.</strong>B1/B2 referans sonrasına uzanan B1 veya B2 dışı skill kaydı yok.</div></td></tr>';
-    } else if(!hasFilteredMatches){
-      sb.innerHTML='<tr><td colspan="11"><div class="empty"><strong>Aramanızla eşleşen kayıt bulunamadı.</strong>Farklı bir sicil, skill, WO, Task Card veya tarih deneyin.</div></td></tr>';
-    } else {
-      for(const p of filteredPeople){
-        const r=p.latest;
-        const tr=document.createElement('tr'); tr.className='row-alert';
-        tr.innerHTML=`
-          <td><span class="badge">AŞIM</span></td>
-          <td><strong>${esc(p.employee)}</strong></td>
-          <td><div class="skills">${p.skills.map(s=>`<span class="skill-chip">${esc(s)}</span>`).join('')}</div></td>
-          <td><strong>${fmtDate(r.end)}</strong> <span class="muted">${fmtTime(r.end)}</span></td>
-          <td>${fmtTime(r.start)} → ${fmtTime(r.end)}</td>
-          <td>${fmtDateTime(r.refEnd)}</td>
-          <td><span class="delta">+${fmtDelta(p.delta)}</span></td>
-          <td>${p.items.length}</td>
-          <td><span class="skill-chip">${esc(r.wo || '—')}</span></td>
-          <td>${esc(r.task || '—')}</td>
-          <td>${p.responsibleB1.length ? `<div class="skills">${p.responsibleB1.map(s=>`<span class="resp-chip">${esc(s)}</span>`).join('')}</div>` : '<span class="muted">—</span>'}</td>`;
-        sb.appendChild(tr);
-      }
-    }
-
     const db=$('detailBody'); db.innerHTML='';
-    for(const r of filteredCandidates){
-      const tr=document.createElement('tr'); tr.innerHTML=`
-        <td><strong>${esc(r.employee)}</strong></td><td><span class="skill-chip">${esc(r.skill)}</span></td><td><span class="skill-chip">${esc(r.wo||'—')}</span></td><td>${esc(r.task||'—')}</td>
-        <td>${(r.responsibleB1&&r.responsibleB1.length) ? `<div class="skills">${r.responsibleB1.map(s=>`<span class="resp-chip">${esc(s)}</span>`).join('')}</div>` : '<span class="muted">—</span>'}</td>
-        <td>${fmtDateTime(r.start)}</td><td><strong>${fmtDateTime(r.end)}</strong></td><td>${fmtDateTime(r.refEnd)}</td><td><span class="delta">+${fmtDelta(minutesBetween(r.refEnd,r.end))}</span></td>`;
-      db.appendChild(tr);
+    if(!a.b1.length){
+      db.innerHTML='<tr><td colspan="10"><div class="empty"><strong>B1 veya B2 skill kaydı bulunamadı.</strong>Referans oluşturulamadığı için karşılaştırma yapılamadı.</div></td></tr>';
+    } else if(!hasAnyCandidates){
+      db.innerHTML='<tr><td colspan="10"><div class="empty"><strong>Taşan kayıt bulunmadı.</strong>B1/B2 referans sonrasına uzanan B1 veya B2 dışı skill kaydı yok.</div></td></tr>';
+    } else if(!hasFilteredMatches){
+      db.innerHTML='<tr><td colspan="10"><div class="empty"><strong>Aramanızla eşleşen kayıt bulunamadı.</strong>Farklı bir sicil, skill, WO, Task Card veya tarih deneyin.</div></td></tr>';
+    } else {
+      for(const r of filteredCandidates){
+        const tr=document.createElement('tr'); tr.className='row-alert'; tr.innerHTML=`
+          <td><strong>${esc(r.employee)}</strong></td><td><span class="skill-chip">${esc(r.skill)}</span></td><td><span class="skill-chip">${esc(r.wo||'—')}</span></td><td>${esc(r.task||'—')}</td>
+          <td>${statusChip(r.nrcStatus)}</td>
+          <td>${(r.responsibleB1&&r.responsibleB1.length) ? `<div class="skills">${r.responsibleB1.map(s=>`<span class="resp-chip">${esc(s)}</span>`).join('')}</div>` : '<span class="muted">—</span>'}</td>
+          <td>${fmtDateTime(r.start)}</td><td><strong>${fmtDateTime(r.end)}</strong></td><td>${fmtDateTime(r.refEnd)}</td><td><span class="delta">+${fmtDelta(minutesBetween(r.refEnd,r.end))}</span></td>`;
+        db.appendChild(tr);
+      }
     }
     $('exportBtn').disabled = !hasFilteredMatches;
 
-    const directoryMatches = buildDirectoryMatches(a);
-    $('directorySection').classList.toggle('hidden', directoryMatches.length === 0);
-    $('directorySub').textContent = directoryMatches.length
-      ? `Takip listesindeki ${directoryMatches.length} personel sonuçlarda tespit edildi.`
+    const directoryGroups = groupDirectoryRowsByPerson(buildDirectoryRows(a));
+    const directoryRowCount = directoryGroups.reduce((sum,g)=>sum+g.items.length,0);
+    $('directorySection').classList.toggle('hidden', directoryGroups.length === 0);
+    $('directorySub').textContent = directoryGroups.length
+      ? `Ekibimizden ${directoryGroups.length} personele ait ${directoryRowCount} taşma kaydı tespit edildi.`
       : '-';
     const dirBody=$('directoryBody'); dirBody.innerHTML='';
-    for (const m of directoryMatches){
-      const tr=document.createElement('tr');
-      const roleChips = m.roles.map(role => role==='tasan'
-        ? '<span class="badge">TAŞAN PERSONEL</span>'
-        : '<span class="resp-chip">SORUMLU B1/B2</span>'
-      ).join(' ');
-      tr.innerHTML = `<td><strong>${esc(m.sicil)}</strong></td><td>${esc(m.name)}</td><td>${roleChips}</td>`;
-      dirBody.appendChild(tr);
+    for (const g of directoryGroups){
+      g.items.forEach((m, idx)=>{
+        const tr=document.createElement('tr');
+        if (idx===0) tr.classList.add('group-start');
+        const identityCells = idx===0
+          ? `<td rowspan="${g.items.length}" style="vertical-align:top"><strong>${esc(g.sicil)}</strong></td><td rowspan="${g.items.length}" style="vertical-align:top">${esc(g.name)}</td>`
+          : '';
+        tr.innerHTML = `
+          <td><span class="skill-chip">${esc(m.wo || '—')}</span></td>
+          <td>${esc(m.task || '—')}</td>
+          <td>${statusChip(m.nrcStatus)}</td>
+          ${identityCells}
+          <td>${fmtDate(m.start)} ${fmtTime(m.start)} → ${fmtTime(m.end)}</td>
+          <td>${m.responsibleB1.length ? `<div class="skills">${m.responsibleB1.map(s=>`<span class="resp-chip">${esc(s)}</span>`).join('')}</div>` : '<span class="muted">—</span>'}</td>
+          <td>${fmtDateTime(m.refEnd)}</td>
+          <td><span class="delta">+${fmtDelta(m.delta)}</span></td>`;
+        dirBody.appendChild(tr);
+      });
     }
   }
 
@@ -650,12 +656,12 @@ ACTUAL)</div>
     const a=state.analysis; if(!a) return;
     const candidates=getFilteredCandidates(a);
     if(!candidates.length) return;
-    const rows=[['Durum','Personel Sicil','Skill','WO','Task Card','Sorumlu B1/B2 Personeli','Başlangıç','Bitiş','B1/B2 Referans Sonu','Taşma Süresi']];
+    const rows=[['Durum','Personel Sicil','Skill','WO','Task Card','WO/TC Durum','Sorumlu B1/B2 Personeli','Başlangıç','Bitiş','Son B1/B2 saati','Taşma Süresi']];
     for(const r of candidates){
-      rows.push(['AŞIM',r.employee,r.skill,r.wo||'',r.task||'',(r.responsibleB1||[]).join(', '),fmtDateTime(r.start),fmtDateTime(r.end),fmtDateTime(r.refEnd),fmtDelta(minutesBetween(r.refEnd,r.end))]);
+      rows.push(['AŞIM',r.employee,r.skill,r.wo||'',r.task||'',r.nrcStatus||'',(r.responsibleB1||[]).join(', '),fmtDateTime(r.start),fmtDateTime(r.end),fmtDateTime(r.refEnd),fmtDelta(minutesBetween(r.refEnd,r.end))]);
     }
     const ws=XLSX.utils.aoa_to_sheet(rows);
-    ws['!cols']=[{wch:10},{wch:18},{wch:14},{wch:16},{wch:24},{wch:22},{wch:20},{wch:20},{wch:20},{wch:16}];
+    ws['!cols']=[{wch:10},{wch:18},{wch:14},{wch:16},{wch:24},{wch:14},{wch:22},{wch:20},{wch:20},{wch:20},{wch:16}];
     const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,'B1 Aşım Raporu');
     XLSX.writeFile(wb,'B1_Saat_Asim_Raporu.xlsx');
   }
@@ -673,6 +679,11 @@ ACTUAL)</div>
   $('searchInput').addEventListener('input',e=>{ state.search=e.target.value; render(); });
   $('clearSearchBtn').addEventListener('click',()=>{ state.search=''; render(); $('searchInput').focus(); });
   $('resetBtn').addEventListener('click',()=>location.reload());
+
+  loadNrcStatusMap().then(map => {
+    state.nrcStatusMap = map || new Map();
+    if (state.analysis){ attachNrcStatus(state.analysis); render(); }
+  });
 })();
 </script>
 </body>
